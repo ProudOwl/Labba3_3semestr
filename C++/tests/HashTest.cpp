@@ -1,0 +1,256 @@
+#include "gtest/gtest.h"
+#include "../Hash.h"
+#include "../HashSerialize.h"
+#include <sstream>
+#include <iostream>
+#include <cstdio>
+
+using namespace std;
+
+class OutputCapture {
+    stringstream buffer;
+    streambuf* old;
+public:
+    OutputCapture() : old(cout.rdbuf(buffer.rdbuf())) {}
+    ~OutputCapture() { cout.rdbuf(old); }
+    string str() const { return buffer.str(); }
+};
+
+TEST(HashTest, OpenHash_Insert_Update_DeletedSlot) {
+    OpenHash h(3);
+
+    h.insert("A","1");
+    h.insert("B","2");
+    h.insert("C","3");
+
+    h.insert("A","99");
+    EXPECT_EQ(h.find("A"), "99");
+
+    EXPECT_TRUE(h.erase("B"));
+    EXPECT_EQ(h.find("B"), "");
+
+    h.insert("X","Y");
+    EXPECT_EQ(h.find("X"), "Y");
+}
+
+TEST(HashTest, OpenHash_FindErase_NotFound) {
+    OpenHash h(3);
+    h.insert("A","1");
+
+    EXPECT_EQ(h.find("NOPE"), "");
+
+    EXPECT_FALSE(h.erase("NOPE"));
+}
+
+TEST(HashTest, OpenHash_FullTable) {
+    OpenHash h(2); 
+    h.insert("A", "1");
+    h.insert("B", "2");
+    
+    h.insert("C", "3"); 
+    
+    EXPECT_EQ(h.find("A"), "1");
+    EXPECT_EQ(h.find("B"), "2");
+    EXPECT_EQ(h.find("C"), ""); 
+}
+
+TEST(HashTest, Hash_InsertUpdate) {
+    Hash h(5);
+    h.insert("Key1", "Val1");
+    
+    h.insert("Key1", "Val2");
+    
+    EXPECT_EQ(h.find("Key1"), "Val2");
+}
+
+TEST(HashTest, Hash_CollisionsAndErase) {
+    Hash h(1);
+    h.insert("A", "1");
+    h.insert("B", "2");
+    h.insert("C", "3");
+
+    EXPECT_EQ(h.find("A"), "1");
+    EXPECT_EQ(h.find("B"), "2");
+    EXPECT_EQ(h.find("C"), "3");
+
+    EXPECT_TRUE(h.erase("B"));
+    EXPECT_EQ(h.find("B"), "");
+
+    h.erase("C");
+    EXPECT_EQ(h.find("C"), "");
+    
+    h.erase("A");
+    EXPECT_EQ(h.find("A"), "");
+    
+    EXPECT_FALSE(h.erase("Z"));
+}
+
+TEST(HashTest, Hash_ShowEmpty) {
+    Hash h(5);
+    h.show();
+    SUCCEED();
+}
+
+TEST(HashTest, Hash_SaveLoad) {
+    string fname = "chain_hash.dat";
+    {
+        Hash h(5);
+        h.insert("One", "1");
+        h.insert("Two", "2");
+        HashSerializer::saveToFile(h, fname);
+    }
+    
+    {
+        Hash h(5);
+        HashSerializer::loadFromFile(h, fname);
+        EXPECT_EQ(h.find("One"), "1");
+        EXPECT_EQ(h.find("Two"), "2");
+        EXPECT_EQ(h.find("Three"), "");
+    }
+    remove(fname.c_str());
+}
+
+TEST(HashTest, OpenHash_SaveLoad) {
+    string fname = "open_hash.dat";
+    {
+        OpenHash h(5);
+        h.insert("Alpha", "100");
+        h.insert("Beta", "200");
+        HashSerializer::saveToFile(h, fname);
+    }
+    
+    {
+        OpenHash h(5);
+        HashSerializer::loadFromFile(h, fname);
+        EXPECT_EQ(h.find("Alpha"), "100");
+        EXPECT_EQ(h.find("Beta"), "200");
+    }
+    remove(fname.c_str());
+}
+
+TEST(HashTest, LoadFromBadFile) {
+    Hash ch(5);
+    HashSerializer::loadFromFile(ch, "non_existent_file.dat");
+    
+    OpenHash oh(5);
+    HashSerializer::loadFromFile(oh, "non_existent_file.dat");
+}
+
+TEST(HashTest, parse_cmd_CorrectSplits) {
+    string cmd, arg1, rest;
+    parse_cmd("INSERT   key   value", cmd, arg1, rest);
+    EXPECT_EQ(cmd, "INSERT");
+    EXPECT_EQ(arg1, "key");
+    EXPECT_EQ(rest, "value");
+}
+
+TEST(HashTest, parse_cmd_LeadingSpaces) {
+    string cmd, arg1, rest;
+    parse_cmd("   SEARCH   A", cmd, arg1, rest);
+    
+    EXPECT_EQ(cmd, "SEARCH"); 
+    EXPECT_EQ(arg1, "A");
+}
+
+TEST(HashTest, Hash_Collision_DeleteMiddle) {
+    Hash h(1); 
+    h.insert("A", "1");
+    h.insert("B", "2");
+    h.insert("C", "3");
+    
+
+    EXPECT_TRUE(h.erase("B"));
+    EXPECT_EQ(h.find("B"), "");
+    EXPECT_EQ(h.find("C"), "3");
+    EXPECT_EQ(h.find("A"), "1");
+    
+    EXPECT_TRUE(h.erase("C"));
+    EXPECT_EQ(h.find("C"), "");
+    EXPECT_EQ(h.find("A"), "1");
+}
+
+TEST(HashTest, Hash_UpdateValue) {
+    Hash h(5);
+    h.insert("Key", "Val1");
+    h.insert("Key", "Val2");
+    EXPECT_EQ(h.find("Key"), "Val2");
+}
+
+TEST(HashTest, Hash_EmptyOps) {
+    Hash h(5);
+    EXPECT_FALSE(h.erase("Missing"));
+    EXPECT_EQ(h.find("Missing"), "");
+    
+    OutputCapture cap;
+    h.show();
+    EXPECT_NE(cap.str().find("пусто"), string::npos);
+}
+
+TEST(HashTest, OpenHash_TableFull_WrapAround) {
+    OutputCapture cap;
+    OpenHash h(2);
+    h.insert("A", "1");
+    h.insert("B", "2");
+    
+
+    h.insert("C", "3"); 
+    
+    EXPECT_NE(cap.str().find("переполнена"), string::npos);
+}
+
+TEST(HashTest, OpenHash_Deleted_Reuse) {
+    OpenHash h(3);
+    h.insert("A", "1");
+    h.insert("B", "2");
+    
+    h.erase("A");
+    EXPECT_EQ(h.find("A"), "");
+    
+    h.insert("C", "3");
+    EXPECT_EQ(h.find("C"), "3");
+    
+    EXPECT_EQ(h.find("B"), "2");
+}
+
+TEST(HashTest, OpenHash_Loop_NotFound) {
+    OpenHash h(3);
+    h.insert("A", "1");
+    EXPECT_EQ(h.find("Z"), "");
+    EXPECT_FALSE(h.erase("Z"));
+}
+
+TEST(HashTest, Hash_IO_Errors) {
+    Hash ch(5);
+    HashSerializer::saveToFile(ch, "");
+    HashSerializer::loadFromFile(ch, "missing.txt");
+    
+    OpenHash oh(5);
+    HashSerializer::saveToBinaryFile(oh, "");
+    HashSerializer::loadFromBinaryFile(oh, "missing.bin");
+}
+
+TEST(HashTest, Hash_Cmd_Parse) {
+    string cmd, a1, rest;
+    parse_cmd("  INSERT   Key   Value With Space  ", cmd, a1, rest);
+    EXPECT_EQ(cmd, "INSERT");
+    EXPECT_EQ(a1, "Key");
+    EXPECT_EQ(rest, "Value With Space  ");
+}
+
+TEST(HashTest, hash_man_scripted) {
+    stringstream fake_in;
+    fake_in 
+        << "INSERT A 1\n"
+        << "SEARCH A\n"
+        << "DELETE A\n"
+        << "SHOW\n"
+        << "BACK\n";
+
+    streambuf* old_in = cin.rdbuf(fake_in.rdbuf());
+    OutputCapture cap;
+    hash_man();
+    cin.rdbuf(old_in);
+
+    EXPECT_NE(cap.str().find("УПРАВЛЕНИЕ"), string::npos);
+    EXPECT_NE(cap.str().find("Выход"), string::npos);
+}
