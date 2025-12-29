@@ -199,3 +199,192 @@ func TestSerialize_Array(t *testing.T) {
 	arr.AddTail("Test1")
 	arr.AddTail("Test2")
 }
+
+func TestHash_EdgeCases(t *testing.T) {
+	hash1 := NewChainHash(1)
+	hash1.Insert("test", "value")
+	hash1.Insert("test2", "value2")
+	if hash1.Find("test") != "value" {
+		t.Error("Should find inserted value")
+	}
+	hash1.Print()
+	
+	hash2 := NewOpenHash(2)
+	hash2.Insert("a", "1")
+	hash2.Insert("b", "2")
+	hash2.Insert("c", "3")
+	hash2.Print()
+	
+	hash3 := NewChainHash(3)
+	for i := 0; i < 10; i++ {
+		key := string(rune('a' + i))
+		hash3.Insert(key, "value"+string(rune('0'+i)))
+	}
+	
+	for i := 0; i < 10; i++ {
+		key := string(rune('a' + i))
+		expected := "value" + string(rune('0'+i))
+		if hash3.Find(key) != expected {
+			t.Errorf("Expected %s for key %s, got %s", expected, key, hash3.Find(key))
+		}
+	}
+	hash3.Print()
+	
+	hash4 := NewChainHash(5)
+	hash4.Insert("k1", "v1")
+	hash4.Insert("k2", "v2")
+	hash4.Delete("k1")
+	hash4.Delete("k2")
+	if hash4.Find("k1") != "" || hash4.Find("k2") != "" {
+		t.Error("All elements should be deleted")
+	}
+	hash4.Print()
+}
+
+//Тест для проверки логики удаления
+func TestOpenHash_DeleteLogic(t *testing.T) {
+	hash := NewOpenHash(5)
+	
+	hash.Insert("a", "1")
+	hash.Insert("b", "2")
+	hash.Insert("c", "3")
+	
+	if !hash.Delete("b") {
+		t.Error("Should delete existing key")
+	}
+	
+	idx := hash.hash("b")
+	foundDeleted := false
+	
+	for i := 0; i < hash.cap; i++ {
+		currentIdx := (idx + i) % hash.cap
+		if hash.table[currentIdx].Deleted && hash.table[currentIdx].Key == "b" {
+			foundDeleted = true
+			break
+		}
+		if !hash.table[currentIdx].Used && !hash.table[currentIdx].Deleted {
+			break
+		}
+	}
+	
+	if !foundDeleted {
+		t.Error("Slot should be marked as Deleted")
+	}
+	
+	if hash.Delete("nonexistent") {
+		t.Error("Should return false for non-existent key")
+	}
+	
+	if hash.Delete("b") {
+		t.Error("Should return false for already deleted key")
+	}
+}
+
+func TestOpenHash_DeleteAllAndReinsert(t *testing.T) {
+	hash := NewOpenHash(3)
+	
+	hash.Insert("k1", "v1")
+	hash.Insert("k2", "v2")
+	hash.Insert("k3", "v3")
+	
+	hash.Delete("k1")
+	hash.Delete("k2")
+	hash.Delete("k3")
+	
+	for i := 0; i < hash.cap; i++ {
+		if !hash.table[i].Deleted {
+			t.Errorf("Slot %d should be marked as Deleted", i)
+		}
+	}
+	
+	hash.Insert("new1", "val1")
+	hash.Insert("new2", "val2")
+	hash.Insert("new3", "val3")
+	
+	if hash.Find("new1") != "val1" || hash.Find("new2") != "val2" || hash.Find("new3") != "val3" {
+		t.Error("Should find all reinserted values")
+	}
+}
+
+// Удаление из середины кластера
+func TestOpenHash_DeleteInMiddleOfCluster(t *testing.T) {
+	hash := NewOpenHash(5)
+	
+	hash.Insert("a", "1")
+	hash.Insert("aa", "2")
+	hash.Insert("aaa", "3")
+	
+	if !hash.Delete("aa") {
+		t.Error("Should delete from middle of cluster")
+	}
+	
+	if hash.Find("a") != "1" {
+		t.Error("Should find a")
+	}
+	if hash.Find("aaa") != "3" {
+		t.Error("Should find aaa")
+	}
+	if hash.Find("aa") != "" {
+		t.Error("Should not find deleted aa")
+	}
+	
+	hash.Insert("bb", "4")
+	if hash.Find("bb") != "4" {
+		t.Error("Should find bb in reused slot")
+	}
+}
+
+// Проверка что не зацикливается при поиске
+func TestOpenHash_DeleteNotFoundLoops(t *testing.T) {
+	hash := NewOpenHash(3)
+	
+	hash.Insert("k1", "v1")
+	hash.Insert("k2", "v2")
+	hash.Insert("k3", "v3")
+	
+	hash.Delete("k1")
+	hash.Delete("k2")
+	hash.Delete("k3")
+	
+	if hash.Delete("nonexistent") {
+		t.Error("Should return false for non-existent key in full deleted table")
+	}
+	
+	if hash.Find("nonexistent") != "" {
+		t.Error("Should return empty string for non-existent key")
+	}
+}
+
+func TestOpenHash_DeleteThenFind(t *testing.T) {
+	hash := NewOpenHash(10)
+
+	keys := []string{"apple", "banana", "cherry", "date", "elderberry"}
+	for i, key := range keys {
+		hash.Insert(key, string(rune('A'+i)))
+	}
+	
+	for i, key := range keys {
+		expected := string(rune('A' + i))
+		if hash.Find(key) != expected {
+			t.Errorf("Expected %s for %s, got %s", expected, key, hash.Find(key))
+		}
+	}
+	
+	hash.Delete("banana")
+	hash.Delete("date")
+	
+	if hash.Find("banana") != "" || hash.Find("date") != "" {
+		t.Error("Deleted keys should not be found")
+	}
+	
+	if hash.Find("apple") != "A" || hash.Find("cherry") != "C" || hash.Find("elderberry") != "E" {
+		t.Error("Non-deleted keys should still be found")
+	}
+	
+	hash.Insert("blueberry", "F")
+	hash.Insert("fig", "G")
+	
+	if hash.Find("blueberry") != "F" || hash.Find("fig") != "G" {
+		t.Error("New keys should be found")
+	}
+}
