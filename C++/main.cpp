@@ -29,7 +29,7 @@ void showComm() {
          << "--- СОХРАНЕНИЕ/ЗАГРУЗКА ---\n"
          << "SAVE <filename> - Сохранить все структуры в файлы (e.g., file.arr)\n"
          << "LOAD <filename> - Загрузить все структуры из файлов\n\n"
-         << "--- МАССИВ (MyArr) ---\n"
+         << "--- МАССИВ (Array) ---\n"
          << "M_PUSH_END <val> - Добавить в конец массива\n"
          << "M_PUSH_HEAD <val> - Добавить в начало\n"
          << "M_PUSH_AT <idx> <val> - Добавить по индексу\n"
@@ -39,7 +39,7 @@ void showComm() {
          << "M_GET_AT <idx> - Получить по индексу\n"
          << "M_REPLACE_AT <idx> <val> - Заменить по индексу\n"
          << "M_LENGTH - Узнать длину массива\n\n"
-         << "--- ОДНОСВЯЗНЫЙ СПИСОК (MyList) ---\n"
+         << "--- ОДНОСВЯЗНЫЙ СПИСОК (SList) ---\n"
          << "F_PUSH_HEAD <val> - Добавить в начало\n"
          << "F_PUSH_TAIL <val> - Добавить в конец\n"
          << "F_PUSH_AFTER <target> <val> - Добавить после значения\n"
@@ -66,7 +66,7 @@ void showComm() {
          << "S_PUSH <val> - Добавить в стек\n"
          << "S_POP - Извлечь из стека\n"
          << "S_GET - Прочитать верхний элемент\n\n"
-         << "--- ПОЛНОЕ БИНАРНОЕ ДЕРЕВО (CompleteBT) ---\n"
+         << "--- ПОЛНОЕ БИНАРНОЕ ДЕРЕВО (CBT) ---\n"
          << "CBT_INSERT <num> - Вставить число\n"
          << "CBT_REMOVE <num> - Удалить число\n"
          << "CBT_SEARCH <num> - Найти число\n"
@@ -144,32 +144,73 @@ int main() {
         }
 
         if (cmd == "SAVE") {
-            if (arg1.empty()) { cout << "Ошибка: нужно имя файла-основы." << "\n"; continue; }
-            // Используем сериализаторы вместо методов классов
-            ArraySerializer::saveToFile(arr, arg1 + ".arr");
-            SinglyListSerializer::saveToFile(slist, arg1 + ".list");
-            DoublyListSerializer::saveToFile(dlist, arg1 + ".dlist");
-            StackSerializer::saveToFile(stack, arg1 + ".stack");
-            QueueSerializer::saveToFile(queue, arg1 + ".queue");
-            CBTSerializer::saveToFile(cbt, arg1 + ".cbt");
-            HashSerializer::saveToFile(htChain, arg1 + ".chainhash");
-            HashSerializer::saveToFile(htOpen, arg1 + ".openhash");
-            cout << "Структуры сохранены с базовым именем: " << arg1 << "\n";
+            if (arg1.empty()) { 
+                cout << "Ошибка: нужно имя файла-основы." << "\n"; 
+                continue; 
+            }
+            ArraySerializer::saveToFile(arr, arg1 + ".arr.txt");
+            SinglyListSerializer::saveToFile(slist, arg1 + ".list.txt");
+            DoublyListSerializer::saveToFile(dlist, arg1 + ".dlist.txt");
+            StackSerializer::saveToFile(stack, arg1 + ".stack.txt");
+            QueueSerializer::saveToFile(queue, arg1 + ".queue.txt");
+            CBTSerializer::saveToFile(cbt, arg1 + ".cbt.txt");
+            HashSerializer::saveToFile(htChain, arg1 + ".chainhash.txt");
+            HashSerializer::saveToFile(htOpen, arg1 + ".openhash.txt");
+            cout << "Структуры сохранены в текстовом формате с базовым именем: " << arg1 << "\n";
             continue;
         }
+        
+        if (cmd == "SAVE_BIN") {
+            if (arg1.empty()) { 
+                cout << "Ошибка: нужно имя файла-основы." << "\n"; 
+                continue; 
+            }
+            ArraySerializer::saveToBinaryFile(arr, arg1 + ".arr.bin");
+            SinglyListSerializer::saveToBinaryFile(slist, arg1 + ".list.bin");
+            DoublyListSerializer::saveToBinaryFile(dlist, arg1 + ".dlist.bin");
+            StackSerializer::saveToBinaryFile(stack, arg1 + ".stack.bin");
+            QueueSerializer::saveToBinaryFile(queue, arg1 + ".queue.bin");
+            CBTSerializer::saveToBinaryFile(cbt, arg1 + ".cbt.bin");
+            HashSerializer::saveToBinaryFile(htChain, arg1 + ".chainhash.bin");
+            HashSerializer::saveToBinaryFile(htOpen, arg1 + ".openhash.bin");
+            cout << "Структуры сохранены в бинарном формате с базовым именем: " << arg1 << "\n";
+            continue;
+        }
+        
         if (cmd == "LOAD") {
-            if (arg1.empty()) { cout << "Ошибка: нужно имя файла-основы." << "\n"; continue; }
-            // Используем сериализаторы вместо методов классов
-            ArraySerializer::loadFromFile(arr, arg1 + ".arr");
-            SinglyListSerializer::loadFromFile(slist, arg1 + ".list");
-            DoublyListSerializer::loadFromFile(dlist, arg1 + ".dlist");
-            StackSerializer::loadFromFile(stack, arg1 + ".stack");
-            QueueSerializer::loadFromFile(queue, arg1 + ".queue");
-            CBTSerializer::loadFromFile(cbt, arg1 + ".cbt");
-            HashSerializer::loadFromFile(htChain, arg1 + ".chainhash");
-            HashSerializer::loadFromFile(htOpen, arg1 + ".openhash");
-            cout << "Структуры загружены с базовым именем: " << arg1 << "\n";
+            if (arg1.empty()) { 
+                cout << "Ошибка: нужно имя файла-основы." << "\n"; 
+                continue; 
+            }
+            ArraySerializer::loadFromFile(arr, arg1 + ".arr.txt");
+            SinglyListSerializer::loadFromFile(slist, arg1 + ".list.txt");
+            DoublyListSerializer::loadFromFile(dlist, arg1 + ".dlist.txt");
+            StackSerializer::loadFromFile(stack, arg1 + ".stack.txt");
+            QueueSerializer::loadFromFile(queue, arg1 + ".queue.txt");
+            CBTSerializer::loadFromFile(cbt, arg1 + ".cbt.txt");
+            HashSerializer::loadFromFile(htChain, arg1 + ".chainhash.txt");
+            HashSerializer::loadFromFile(htOpen, arg1 + ".openhash.txt");
+            cout << "Структуры загружены из текстового формата с базовым именем: " << arg1 << "\n";
             cmd = "PRINT";
+            continue;
+        }
+        
+        if (cmd == "LOAD_BIN") {
+            if (arg1.empty()) { 
+                cout << "Ошибка: нужно имя файла-основы." << "\n"; 
+                continue; 
+            }
+            ArraySerializer::loadFromBinaryFile(arr, arg1 + ".arr.bin");
+            SinglyListSerializer::loadFromBinaryFile(slist, arg1 + ".list.bin");
+            DoublyListSerializer::loadFromBinaryFile(dlist, arg1 + ".dlist.bin");
+            StackSerializer::loadFromBinaryFile(stack, arg1 + ".stack.bin");
+            QueueSerializer::loadFromBinaryFile(queue, arg1 + ".queue.bin");
+            CBTSerializer::loadFromBinaryFile(cbt, arg1 + ".cbt.bin");
+            HashSerializer::loadFromBinaryFile(htChain, arg1 + ".chainhash.bin");
+            HashSerializer::loadFromBinaryFile(htOpen, arg1 + ".openhash.bin");
+            cout << "Структуры загружены из бинарного формата с базовым именем: " << arg1 << "\n";
+            cmd = "PRINT";
+            continue;
         }
 
         if (cmd == "M_PUSH_END") {
